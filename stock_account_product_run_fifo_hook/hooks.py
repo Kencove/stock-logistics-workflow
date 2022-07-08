@@ -137,6 +137,12 @@ def post_load_hook():
             ("remaining_qty", ">", 0),
             ("create_date", ">=", svls_to_vacuum[0].create_date),
         ]
+        if self.env.context.get("use_past_svl", False):
+            domain = [
+                ("company_id", "=", company.id),
+                ("product_id", "=", self.id),
+                ("remaining_qty", ">", 0),
+            ]
         all_candidates = self.env["stock.valuation.layer"].sudo().search(domain)
         for svl_to_vacuum in svls_to_vacuum:
             # We don't use search to avoid executing _flush_search and to decrease interaction with DB
@@ -145,6 +151,8 @@ def post_load_hook():
                 or r.create_date == svl_to_vacuum.create_date
                 and r.id > svl_to_vacuum.id
             )
+            if self.env.context.get("use_past_svl", False):
+                candidates = all_candidates
             if not candidates:
                 break
             qty_to_take_on_candidates = abs(svl_to_vacuum.remaining_qty)
