@@ -36,9 +36,17 @@ class StockMove(models.Model):
             in_layer = layers.filtered(
                 lambda l: l.quantity > 0 and l.stock_move_id == move
             )
+            # FIXME: this could be more than one?, can be for multi lots layers?
+            out_layer = self.env["stock.valuation.layer"].search(
+                [
+                    ("stock_move_id", "=", move.id),
+                ],
+                limit=1,
+            )
             self.env["stock.valuation.layer.usage"].sudo().create(
                 {
                     "stock_valuation_layer_id": in_layer.id,
+                    "dest_stock_valuation_layer_id": out_layer.id,
                     "stock_move_id": move.id,
                     "quantity": in_layer.quantity,
                     "value": in_layer.value,
@@ -46,12 +54,3 @@ class StockMove(models.Model):
                 }
             )
         return layers
-
-    def _get_in_moves(self):
-        """We try to fetch the moves that originated"""
-        in_moves = self.env["stock.move"]
-        for move in self:
-            if move._is_in():
-                in_moves |= move
-            in_moves |= move.move_orig_ids._get_in_moves()
-        return in_moves
