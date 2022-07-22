@@ -325,40 +325,22 @@ class TestStockValuationLayerUsage(TransactionCase):
         self.assertEquals(layer_usage.value, 10.0)
         self.assertEquals(layer_usage.stock_valuation_layer_id, in_layer)
 
-    def test_03_mto(self):
-        """Create a delivery
-        Receive 1, reserve
-        Receive another, no not reserve
-        Deliver 1, the system shoudl take the one not reserved, instead
-        of the oldest
-        Deliver the other, the system should find the reserved one.
-        """
-        # Create delivery
-        out_picking_reserved = self._create_delivery(self.product, 1)
-        # Create receipt and for and reserve
-        in_picking_reserved = self._create_receipt(
-            self.product, 1.0, out_picking_reserved.move_lines.ids[0]
+    def test_03_revaluation_of_negative_fifo(self):
+        out_picking = self._create_delivery(self.product, 10)
+        self._do_picking(out_picking, fields.Datetime.now(), 10.0)
+        out_layer = out_picking.move_lines.stock_valuation_layer_ids
+        remaining_qty = sum(
+            out_picking.move_lines.stock_valuation_layer_ids.mapped("remaining_qty")
         )
-        # Receive one unit.
-        self._do_picking(in_picking_reserved, fields.Datetime.now(), 1.0)
-        layer_reserved = in_picking_reserved.move_lines.stock_valuation_layer_ids
-        # Create another receipt without reserve
-        in_picking_whatever = self._create_receipt(self.product, 1.0)
-        # Receive another unit.
-        self._do_picking(in_picking_whatever, fields.Datetime.now(), 1.0)
-        layer_unreserved = in_picking_whatever.move_lines.stock_valuation_layer_ids
-        # Create an out picking
-        out_picking_whatever = self._create_delivery(self.product, 1)
-        self._do_picking(out_picking_whatever, fields.Datetime.now(), 1.0)
-        # The system associates the unreserved incoming picking not the other
-        self.assertEquals(
-            out_picking_whatever.move_lines.layer_usage_ids.stock_valuation_layer_id,
-            layer_unreserved,
+        self.assertTrue(remaining_qty < 0.0)
+        in_picking = self._create_receipt(self.product, 10.0)
+        self._do_picking(in_picking, fields.Datetime.now(), 10.0)
+        in_layer = in_picking.move_lines.stock_valuation_layer_ids
+        out_picking = self.env["stock.picking"].browse(out_picking.id)
+        remaining_qty = sum(
+            out_picking.move_lines.stock_valuation_layer_ids.mapped("remaining_qty")
         )
-        # Deliver the reserved one
-        self._do_picking(out_picking_reserved, fields.Datetime.now(), 1.0)
-        # The system associates the reserved incoming picking
+        self.assertEquals(remaining_qty, 0)
         self.assertEquals(
-            out_picking_reserved.move_lines.layer_usage_ids.stock_valuation_layer_id,
-            layer_reserved,
+            out_layer.incoming_usage_ids.stock_valuation_layer_id, in_layer
         )
