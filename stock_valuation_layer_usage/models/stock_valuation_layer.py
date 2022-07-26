@@ -34,8 +34,13 @@ class StockValuationLayer(models.Model):
                     ("stock_move_id", "=", rec.stock_move_id.id),
                 ]
             )
-            rec.incoming_usage_ids = incoming_usages.ids
-            rec.incoming_usage_quantity = sum(incoming_usages.mapped("quantity"))
+            incoming_usage_quantity = sum(incoming_usages.mapped("quantity"))
+            if rec.quantity < 0:
+                rec.incoming_usage_ids = incoming_usages.ids
+                rec.incoming_usage_quantity = incoming_usage_quantity
+            else:
+                rec.incoming_usage_ids = []
+                rec.incoming_usage_quantity = 0
 
     usage_quantity = fields.Float(
         string="Usage quantity",
