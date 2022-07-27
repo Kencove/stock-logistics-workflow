@@ -15,34 +15,33 @@ class StockValuationLayer(models.Model):
         help="Trace on what stock moves has the stock valuation been used in, "
         "including the quantities taken.",
     )
-
-    incoming_usage_ids = fields.Many2many(
+    incoming_usage_ids = fields.One2many(
         comodel_name="stock.valuation.layer.usage",
-        string="Incoming usages",
-        compute="_compute_incoming_usages",
+        inverse_name="dest_stock_valuation_layer_id",
+        string="Incoming Valuation Usage",
+        help="Trace on what stock moves has the stock valuation been used in, "
+        "including the quantities taken.",
     )
 
     incoming_usage_quantity = fields.Float(
         string="Incoming Usage quantity",
         compute="_compute_incoming_usages",
+        store=True,
+    )
+    incoming_usage_value = fields.Float(
+        string="Incoming Usage value",
+        compute="_compute_incoming_usages",
+        store=True,
     )
 
+    @api.depends(
+        "incoming_usage_ids.quantity",
+        "incoming_usage_ids.value",
+    )
     def _compute_incoming_usages(self):
         for rec in self:
-            domain = [
-                ("stock_move_id", "=", rec.stock_move_id.id),
-            ]
-            lots = rec.stock_move_id.mapped("move_line_ids.lot_id").ids
-            if lots:
-                domain += [("stock_move_id.move_line_ids.lot_id", "in", lots)]
-            incoming_usages = self.env["stock.valuation.layer.usage"].search(domain)
-            incoming_usage_quantity = sum(incoming_usages.mapped("quantity"))
-            if rec.quantity < 0:
-                rec.incoming_usage_ids = incoming_usages.ids
-                rec.incoming_usage_quantity = incoming_usage_quantity
-            else:
-                rec.incoming_usage_ids = []
-                rec.incoming_usage_quantity = 0
+            rec.incoming_usage_quantity = sum(rec.incoming_usage_ids.mapped("quantity"))
+            rec.incoming_usage_value = sum(rec.incoming_usage_ids.mapped("value"))
 
     usage_quantity = fields.Float(
         string="Usage quantity",

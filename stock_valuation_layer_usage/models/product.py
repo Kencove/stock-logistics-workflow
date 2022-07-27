@@ -20,9 +20,16 @@ class ProductProduct(models.Model):
             candidate, qty_taken_on_candidate, value_taken_on_candidate, candidate_vals
         )
         move_id = self.env.context.get("used_in_move_id", False)
+        out_layer = self.env["stock.valuation.layer"].search(
+            [
+                ("stock_move_id", "=", move_id),
+            ],
+            limit=1,
+        )
         self.env["stock.valuation.layer.usage"].sudo().create(
             {
                 "stock_valuation_layer_id": candidate.id,
+                "dest_stock_valuation_layer_id": out_layer.id,
                 "stock_move_id": move_id,
                 "quantity": qty_taken_on_candidate,
                 "value": value_taken_on_candidate,
@@ -51,10 +58,17 @@ class ProductProduct(models.Model):
         move_id = (
             svl_to_vacuum.stock_move_id and svl_to_vacuum.stock_move_id.id or False
         )
+        out_layer = self.env["stock.valuation.layer"].search(
+            [
+                ("stock_move_id", "=", move_id),
+            ],
+            limit=1,
+        )
         if svl_to_vacuum:
             self.env["stock.valuation.layer.usage"].sudo().create(
                 {
                     "stock_valuation_layer_id": candidate.id,
+                    "dest_stock_valuation_layer_id": out_layer.id,
                     "stock_move_id": move_id,
                     "quantity": qty_taken_on_candidate,
                     "value": value_taken_on_candidate,
