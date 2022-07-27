@@ -29,11 +29,13 @@ class StockValuationLayer(models.Model):
 
     def _compute_incoming_usages(self):
         for rec in self:
-            incoming_usages = self.env["stock.valuation.layer.usage"].search(
-                [
-                    ("stock_move_id", "=", rec.stock_move_id.id),
-                ]
-            )
+            domain = [
+                ("stock_move_id", "=", rec.stock_move_id.id),
+            ]
+            lots = rec.stock_move_id.mapped("move_line_ids.lot_id").ids
+            if lots:
+                domain += [("stock_move_id.move_line_ids.lot_id", "in", lots)]
+            incoming_usages = self.env["stock.valuation.layer.usage"].search(domain)
             incoming_usage_quantity = sum(incoming_usages.mapped("quantity"))
             if rec.quantity < 0:
                 rec.incoming_usage_ids = incoming_usages.ids
