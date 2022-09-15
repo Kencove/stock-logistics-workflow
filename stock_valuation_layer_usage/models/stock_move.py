@@ -26,9 +26,7 @@ class StockMove(models.Model):
             )
             # FIXME: this could be more than one?, can be for multi lots layers?
             out_layer = self.env["stock.valuation.layer"].search(
-                [
-                    ("stock_move_id", "=", move.id),
-                ],
+                [("stock_move_id", "=", move.id), ("id", "!=", in_layer.id)],
                 limit=1,
             )
             self.env["stock.valuation.layer.usage"].sudo().create(

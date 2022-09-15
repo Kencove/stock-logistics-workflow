@@ -324,6 +324,15 @@ class TestStockValuationLayerUsage(TransactionCase):
         self.assertEquals(layer_usage.quantity, 1.0)
         self.assertEquals(layer_usage.value, 10.0)
         self.assertEquals(layer_usage.stock_valuation_layer_id, in_layer)
+        out_layer = layers.filtered(lambda l: l.quantity < 0)
+        self.assertEquals(
+            out_layer.incoming_usage_ids.mapped("stock_valuation_layer_id").ids,
+            in_layer.ids,
+        )
+        self.assertEquals(
+            in_layer.usage_ids.mapped("dest_stock_valuation_layer_id").ids,
+            out_layer.ids,
+        )
 
     def test_03_revaluation_of_negative_fifo(self):
         out_picking = self._create_delivery(self.product, 10)
