@@ -80,9 +80,14 @@ class StockValuationLayer(models.Model):
 
     def create(self, values):
         taken_data = {}
-        for val in values:
+        if isinstance(values, list):
+            for val in values:
+                taken_data = (
+                    "taken_data" in val.keys() and val.pop("taken_data") or taken_data
+                )
+        elif isinstance(values, dict):
             taken_data = (
-                "taken_data" in val.keys() and val.pop("taken_data") or taken_data
+                "taken_data" in values.keys() and values.pop("taken_data") or taken_data
             )
         rec = super(StockValuationLayer, self).create(values)
         self._process_taken_data(taken_data, rec)
