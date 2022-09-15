@@ -2,7 +2,8 @@
 # @author Jordi Ballester <jordi.ballester@forgeflow.com>
 # License LGPL-3.0 or later (http://www.gnu.org/licenses/lgpl).
 
-from odoo import fields, models, tools
+from odoo import _, api, fields, models, tools
+from odoo.exceptions import ValidationError
 
 
 class StockValuationLayerUsage(models.Model):
@@ -42,3 +43,19 @@ class StockValuationLayerUsage(models.Model):
             self._table,
             ["stock_valuation_layer_id", "stock_move_id", "stock_move_id"],
         )
+
+    @api.constrains(
+        "stock_valuation_layer_id",
+        "dest_stock_valuation_layer_id",
+    )
+    def _check_same_layer(self):
+        for rec in self:
+            if (
+                rec.dest_stock_valuation_layer_id
+                and rec.dest_stock_valuation_layer_id
+                and rec.dest_stock_valuation_layer_id.id
+                == rec.stock_valuation_layer_id.id
+            ):
+                raise ValidationError(
+                    _("You can't user same layer as origin and destination")
+                )
