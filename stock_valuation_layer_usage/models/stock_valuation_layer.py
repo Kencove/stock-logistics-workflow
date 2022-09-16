@@ -79,19 +79,15 @@ class StockValuationLayer(models.Model):
         return True
 
     def create(self, values):
-        taken_data = {}
-        if isinstance(values, list):
-            for val in values:
-                taken_data = (
-                    "taken_data" in val.keys() and val.pop("taken_data") or taken_data
-                )
-        elif isinstance(values, dict):
-            taken_data = (
-                "taken_data" in values.keys() and values.pop("taken_data") or taken_data
-            )
-        rec = super(StockValuationLayer, self).create(values)
-        self._process_taken_data(taken_data, rec)
-        return rec
+        if isinstance(values, dict):
+            values = [values]
+        recs = self.browse()
+        for val in values:
+            taken_data = "taken_data" in val.keys() and val.pop("taken_data") or {}
+            rec = super(StockValuationLayer, self).create(val)
+            self._process_taken_data(taken_data, rec)
+            recs |= rec
+        return recs
 
     def write(self, values):
         res = super(StockValuationLayer, self).write(values)
