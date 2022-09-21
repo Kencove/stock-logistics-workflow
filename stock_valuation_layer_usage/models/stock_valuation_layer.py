@@ -3,6 +3,7 @@
 # License LGPL-3.0 or later (http://www.gnu.org/licenses/lgpl).
 
 from odoo import api, fields, models
+from odoo.tools import float_is_zero
 
 
 class StockValuationLayer(models.Model):
@@ -85,6 +86,52 @@ class StockValuationLayer(models.Model):
         for val in values:
             taken_data = "taken_data" in val.keys() and val.pop("taken_data") or {}
             rec = super(StockValuationLayer, self).create(val)
+            # There are cases in which the transformation
+            # comes from a return process,
+            # such as sales returns or production unbuilds.
+            # To maintain traceability,
+            # the initial output layers are added as origin.
+            if not taken_data and rec.quantity > 0:
+                all_parents = self.env["stock.move"]
+                next_parents = rec.stock_move_id.move_orig_ids
+                while next_parents:
+                    for parent in next_parents:
+                        all_parents |= parent
+                    next_parents = next_parents.mapped("move_orig_ids")
+                if all_parents:
+                    output_layers = self.search(
+                        [
+                            ("stock_move_id", "in", all_parents.ids),
+                            ("quantity", "<", 0),
+                        ],
+                        order="create_date",
+                    )
+                    qty_to_take_on_candidates = rec.quantity
+                    for candidate in output_layers:
+                        qty_taken_on_candidate = min(
+                            qty_to_take_on_candidates, abs(candidate.quantity)
+                        )
+                        taken_data[candidate.id] = {"quantity": qty_taken_on_candidate}
+                        candidate_unit_cost = abs(candidate.value) / abs(
+                            candidate.quantity
+                        )
+                        value_taken_on_candidate = (
+                            qty_taken_on_candidate * candidate_unit_cost
+                        )
+                        value_taken_on_candidate = candidate.currency_id.round(
+                            value_taken_on_candidate
+                        )
+                        taken_data[candidate.id].update(
+                            {
+                                "value": value_taken_on_candidate,
+                            }
+                        )
+                        qty_to_take_on_candidates -= qty_taken_on_candidate
+                        if float_is_zero(
+                            qty_to_take_on_candidates,
+                            precision_rounding=rec.uom_id.rounding,
+                        ):
+                            break
             self._process_taken_data(taken_data, rec)
             recs |= rec
         return recs
