@@ -255,33 +255,33 @@ class TestStockValuationLayerUsage(TransactionCase):
         aml = self.aml_model.search([("product_id", "=", self.product.id)])
         inv_aml = aml.filtered(lambda l: l.account_id == self.account_inventory)
         balance_inv = sum(inv_aml.mapped("balance"))
-        self.assertEquals(balance_inv, 10.0)
+        self.assertEqual(balance_inv, 10.0)
 
         # GRNI is -10
         aml = self.aml_model.search([("product_id", "=", self.product.id)])
         grni_aml = aml.filtered(lambda l: l.account_id == self.account_grni)
         balance_grni = sum(grni_aml.mapped("balance"))
-        self.assertEquals(balance_grni, -10.0)
+        self.assertEqual(balance_grni, -10.0)
 
         # There's a stock valuation layer associated to this product
         move = in_picking.move_lines
         layer = self.layer_model.search([("stock_move_id", "=", move.id)])
-        self.assertEquals(len(layer), 1)
-        self.assertEquals(layer.remaining_qty, 1.0)
-        self.assertEquals(layer.remaining_value, 10.0)
+        self.assertEqual(len(layer), 1)
+        self.assertEqual(layer.remaining_qty, 1.0)
+        self.assertEqual(layer.remaining_value, 10.0)
 
         # Create an out picking
         out_picking = self._create_delivery(self.product, 1)
         self._do_picking(out_picking, fields.Datetime.now(), 1.0)
         # The original layer must have been reduced.
-        self.assertEquals(layer.remaining_qty, 0.0)
-        self.assertEquals(layer.remaining_value, 0.0)
+        self.assertEqual(layer.remaining_qty, 0.0)
+        self.assertEqual(layer.remaining_value, 0.0)
         # The original layer is referenced in the outbound move
         layer_usage = out_picking.move_lines.layer_usage_ids
-        self.assertEquals(len(layer_usage), 1)
-        self.assertEquals(layer_usage.quantity, 1.0)
-        self.assertEquals(layer_usage.value, 10.0)
-        self.assertEquals(layer_usage.stock_valuation_layer_id, layer)
+        self.assertEqual(len(layer_usage), 1)
+        self.assertEqual(layer_usage.quantity, 1.0)
+        self.assertEqual(layer_usage.value, 10.0)
+        self.assertEqual(layer_usage.stock_valuation_layer_id, layer)
 
     def test_02_drop_ship(self):
         """Drop shipment from vendor to customer"""
@@ -300,36 +300,36 @@ class TestStockValuationLayerUsage(TransactionCase):
         # Inventory is 0
         inv_aml = aml.filtered(lambda l: l.account_id == self.account_inventory)
         balance_inv = sum(inv_aml.mapped("balance"))
-        self.assertEquals(balance_inv, 0.0)
+        self.assertEqual(balance_inv, 0.0)
         # GRNI is -10
         grni_aml = aml.filtered(lambda l: l.account_id == self.account_grni)
         balance_grni = sum(grni_aml.mapped("balance"))
-        self.assertEquals(balance_grni, -10.0)
+        self.assertEqual(balance_grni, -10.0)
         # GDNI is 10
         gdni_aml = aml.filtered(lambda l: l.account_id == self.account_gdni)
         balance_gdni = sum(gdni_aml.mapped("balance"))
-        self.assertEquals(balance_gdni, 10.0)
+        self.assertEqual(balance_gdni, 10.0)
 
         # There are two a stock valuation layers associated to this product
         move = dropship_picking.move_lines
         layers = self.layer_model.search([("stock_move_id", "=", move.id)])
-        self.assertEquals(len(layers), 2)
+        self.assertEqual(len(layers), 2)
         in_layer = layers.filtered(lambda l: l.quantity > 0)
         # Check that the layer created for the outgoing move
-        self.assertEquals(in_layer.remaining_qty, 0.0)
-        self.assertEquals(in_layer.remaining_value, 0.0)
+        self.assertEqual(in_layer.remaining_qty, 0.0)
+        self.assertEqual(in_layer.remaining_value, 0.0)
         # The original layer is referenced in the outbound move
         layer_usage = move.layer_usage_ids
-        self.assertEquals(len(layer_usage), 1)
-        self.assertEquals(layer_usage.quantity, 1.0)
-        self.assertEquals(layer_usage.value, 10.0)
-        self.assertEquals(layer_usage.stock_valuation_layer_id, in_layer)
+        self.assertEqual(len(layer_usage), 1)
+        self.assertEqual(layer_usage.quantity, 1.0)
+        self.assertEqual(layer_usage.value, 10.0)
+        self.assertEqual(layer_usage.stock_valuation_layer_id, in_layer)
         out_layer = layers.filtered(lambda l: l.quantity < 0)
-        self.assertEquals(
+        self.assertEqual(
             out_layer.incoming_usage_ids.mapped("stock_valuation_layer_id").ids,
             in_layer.ids,
         )
-        self.assertEquals(
+        self.assertEqual(
             in_layer.usage_ids.mapped("dest_stock_valuation_layer_id").ids,
             out_layer.ids,
         )
@@ -349,7 +349,7 @@ class TestStockValuationLayerUsage(TransactionCase):
         remaining_qty = sum(
             out_picking.move_lines.stock_valuation_layer_ids.mapped("remaining_qty")
         )
-        self.assertEquals(remaining_qty, 0)
-        self.assertEquals(
+        self.assertEqual(remaining_qty, 0)
+        self.assertEqual(
             out_layer.incoming_usage_ids.stock_valuation_layer_id, in_layer
         )
