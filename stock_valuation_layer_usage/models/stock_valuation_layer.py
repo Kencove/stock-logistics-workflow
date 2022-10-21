@@ -92,11 +92,14 @@ class StockValuationLayer(models.Model):
             # the initial output layers are added as origin.
             if not taken_data and rec.quantity > 0:
                 all_parents = self.env["stock.move"]
-                next_parents = rec.stock_move_id.move_orig_ids
+                next_parents = rec.stock_move_id.move_orig_ids.filtered(
+                    lambda m: m not in all_parents
+                )
                 while next_parents:
-                    for parent in next_parents:
-                        all_parents |= parent
-                    next_parents = next_parents.mapped("move_orig_ids")
+                    all_parents |= next_parents
+                    next_parents = next_parents.mapped("move_orig_ids").filtered(
+                        lambda m: m not in all_parents
+                    )
                 if all_parents:
                     output_layers = self.search(
                         [
