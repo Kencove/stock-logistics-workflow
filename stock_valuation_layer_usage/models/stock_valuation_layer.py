@@ -79,9 +79,8 @@ class StockValuationLayer(models.Model):
             )
         return True
 
+    @api.model_create_multi
     def create(self, values):
-        if isinstance(values, dict):
-            values = [values]
         recs = self.browse()
         for val in values:
             taken_data = "taken_data" in val.keys() and val.pop("taken_data") or {}
